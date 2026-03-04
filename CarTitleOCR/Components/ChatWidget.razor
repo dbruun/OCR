@@ -1,0 +1,160 @@
+@rendermode InteractiveServer
+@inject IAgentService AgentService
+@implements IAsyncDisposable
+
+<div class="chat-widget @(_isOpen ? "chat-widget--open" : "")">
+
+    <!-- Toggle button -->
+    <button class="chat-widget__toggle btn btn-primary rounded-circle shadow"
+            @onclick="ToggleChat"
+            title="@(_isOpen ? "Close assistant" : "Ask a question about car titles")">
+        @if (_isOpen)
+        {
+            <span>✕</span>
+        }
+        else
+        {
+            <span>💬</span>
+        }
+    </button>
+
+    @if (_isOpen)
+    {
+        <div class="chat-widget__panel card shadow-lg">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <span><strong>🤖 Title Registration Assistant</strong></span>
+                <button class="btn btn-sm btn-outline-light" @onclick="ClearChat" title="New conversation">
+                    ↺ New
+                </button>
+            </div>
+
+            <!-- Message list -->
+            <div class="chat-widget__messages p-3" @ref="_messagesContainer">
+                @if (_messages.Count == 0)
+                {
+                    <div class="text-muted small fst-italic text-center py-3">
+                        Ask me anything about the vehicle title transfer process!
+                    </div>
+                }
+
+                @foreach (var msg in _messages)
+                {
+                    <div class="mb-2 d-flex @(msg.IsUser ? "justify-content-end" : "justify-content-start")">
+                        <div class="chat-bubble @(msg.IsUser ? "chat-bubble--user" : "chat-bubble--agent")">
+                            @msg.Text
+                        </div>
+                    </div>
+                }
+
+                @if (_isThinking)
+                {
+                    <div class="d-flex justify-content-start mb-2">
+                        <div class="chat-bubble chat-bubble--agent">
+                            <span class="typing-dots">
+                                <span>.</span><span>.</span><span>.</span>
+                            </span>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Input area -->
+            <div class="card-footer p-2">
+                <div class="input-group">
+                    <input @bind="_userInput"
+                           @bind:event="oninput"
+                           @onkeydown="HandleKeyDown"
+                           class="form-control form-control-sm"
+                           placeholder="Ask about title transfers…"
+                           disabled="@_isThinking"
+                           maxlength="500" />
+                    <button class="btn btn-primary btn-sm"
+                            @onclick="SendMessage"
+                            disabled="@(string.IsNullOrWhiteSpace(_userInput) || _isThinking)">
+                        ➤
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private record ChatMessage(string Text, bool IsUser);
+
+    private bool _isOpen;
+    private bool _isThinking;
+    private string _userInput = string.Empty;
+    private readonly List<ChatMessage> _messages = new();
+    private ElementReference _messagesContainer;
+    private CancellationTokenSource? _cts;
+
+    private void ToggleChat() => _isOpen = !_isOpen;
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(_userInput) && !_isThinking)
+            await SendMessage();
+    }
+
+    private async Task SendMessage()
+    {
+        var text = _userInput.Trim();
+        if (string.IsNullOrEmpty(text) || _isThinking) return;
+
+        _userInput = string.Empty;
+        _messages.Add(new ChatMessage(text, IsUser: true));
+        _isThinking = true;
+        StateHasChanged();
+
+        _cts = new CancellationTokenSource();
+
+        // Placeholder for streaming response
+        var agentMsg = new ChatMessage(string.Empty, IsUser: false);
+        _messages.Add(agentMsg);
+        var responseBuilder = new System.Text.StringBuilder();
+
+        try
+        {
+            await foreach (var chunk in AgentService.ChatAsync(text, _cts.Token))
+            {
+                responseBuilder.Append(chunk);
+                // Replace last message with accumulated text
+                _messages[^1] = new ChatMessage(responseBuilder.ToString(), IsUser: false);
+                StateHasChanged();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // User cleared the chat; no-op.
+        }
+        catch (Exception ex)
+        {
+            _messages[^1] = new ChatMessage($"⚠ Sorry, I encountered an error: {ex.Message}", IsUser: false);
+        }
+        finally
+        {
+            _isThinking = false;
+            _cts?.Dispose();
+            _cts = null;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearChat()
+    {
+        _cts?.Cancel();
+        _messages.Clear();
+        _userInput = string.Empty;
+        _isThinking = false;
+        AgentService.ClearHistory();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        if (AgentService is IAsyncDisposable asyncDisposable)
+            await asyncDisposable.DisposeAsync();
+    }
+}
