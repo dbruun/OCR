@@ -1,0 +1,384 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject IOcrService OcrService
+
+<PageTitle>Vehicle Title Registration</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center mb-4">
+        <span class="fs-1 me-3">🚗</span>
+        <div>
+            <h1 class="mb-0">Vehicle Title Application</h1>
+            <p class="text-muted mb-0">Upload an out-of-state title or enter information manually</p>
+        </div>
+    </div>
+
+    <!-- Document Upload Section -->
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📄 Upload Title Document (OCR Auto-Fill)</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                Upload a scan or photo of the vehicle title. Microsoft Azure AI Document Intelligence
+                will automatically extract and populate the form fields below.
+                Accepted formats: PDF, JPEG, PNG, TIFF.
+            </p>
+
+            <InputFile OnChange="HandleFileUpload" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif"
+                       class="form-control mb-3" disabled="@_isProcessing" />
+
+            @if (_isProcessing)
+            {
+                <div class="d-flex align-items-center text-primary">
+                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                    <span>Analyzing document with Azure AI Document Intelligence…</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_uploadMessage))
+            {
+                <div class="alert @(_uploadSuccess ? "alert-success" : "alert-danger") mt-2 mb-0" role="alert">
+                    @_uploadMessage
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Title Entry Form -->
+    <EditForm Model="@_titleModel" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <!-- Vehicle Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">🔧 Vehicle Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Vehicle Identification Number (VIN) @OcrBadge(_titleModel.Vin)
+                        </label>
+                        <InputText @bind-Value="_titleModel.Vin" class="form-control font-monospace"
+                                   placeholder="e.g. 1HGBH41JXMN109186" maxlength="17" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            Year @OcrBadge(_titleModel.Year)
+                        </label>
+                        <InputText @bind-Value="_titleModel.Year" class="form-control"
+                                   placeholder="e.g. 2022" maxlength="4" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            Make @OcrBadge(_titleModel.Make)
+                        </label>
+                        <InputText @bind-Value="_titleModel.Make" class="form-control"
+                                   placeholder="e.g. Toyota" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            Model @OcrBadge(_titleModel.VehicleModel)
+                        </label>
+                        <InputText @bind-Value="_titleModel.VehicleModel" class="form-control"
+                                   placeholder="e.g. Camry" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Body Style @OcrBadge(_titleModel.BodyStyle)
+                        </label>
+                        <InputSelect @bind-Value="_titleModel.BodyStyle" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option>Sedan</option>
+                            <option>SUV</option>
+                            <option>Truck</option>
+                            <option>Van</option>
+                            <option>Coupe</option>
+                            <option>Convertible</option>
+                            <option>Wagon</option>
+                            <option>Hatchback</option>
+                            <option>Motorcycle</option>
+                            <option>Other</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Color @OcrBadge(_titleModel.Color)
+                        </label>
+                        <InputText @bind-Value="_titleModel.Color" class="form-control"
+                                   placeholder="e.g. Silver" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Odometer Reading @OcrBadge(_titleModel.Odometer)
+                        </label>
+                        <InputText @bind-Value="_titleModel.Odometer" class="form-control"
+                                   placeholder="e.g. 45000" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Title Number @OcrBadge(_titleModel.TitleNumber)
+                        </label>
+                        <InputText @bind-Value="_titleModel.TitleNumber" class="form-control"
+                                   placeholder="Title document number" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Issuing State @OcrBadge(_titleModel.StateOfIssuance)
+                        </label>
+                        <InputText @bind-Value="_titleModel.StateOfIssuance" class="form-control"
+                                   placeholder="e.g. CA, TX, NY" maxlength="2" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previous Owner -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">👤 Previous Owner (Seller / Transferor)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Full Name @OcrBadge(_titleModel.PreviousOwnerName)
+                        </label>
+                        <InputText @bind-Value="_titleModel.PreviousOwnerName" class="form-control"
+                                   placeholder="Full legal name" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Street Address @OcrBadge(_titleModel.PreviousOwnerAddress)
+                        </label>
+                        <InputText @bind-Value="_titleModel.PreviousOwnerAddress" class="form-control"
+                                   placeholder="Street address" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            City @OcrBadge(_titleModel.PreviousOwnerCity)
+                        </label>
+                        <InputText @bind-Value="_titleModel.PreviousOwnerCity" class="form-control"
+                                   placeholder="City" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            State @OcrBadge(_titleModel.PreviousOwnerState)
+                        </label>
+                        <InputText @bind-Value="_titleModel.PreviousOwnerState" class="form-control"
+                                   placeholder="State" maxlength="2" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            ZIP Code @OcrBadge(_titleModel.PreviousOwnerZip)
+                        </label>
+                        <InputText @bind-Value="_titleModel.PreviousOwnerZip" class="form-control"
+                                   placeholder="ZIP" maxlength="10" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Owner -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">🏠 New Owner (Buyer / Transferee)</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Full Name @OcrBadge(_titleModel.NewOwnerName)
+                        </label>
+                        <InputText @bind-Value="_titleModel.NewOwnerName" class="form-control"
+                                   placeholder="Full legal name" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Street Address @OcrBadge(_titleModel.NewOwnerAddress)
+                        </label>
+                        <InputText @bind-Value="_titleModel.NewOwnerAddress" class="form-control"
+                                   placeholder="Street address" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            City @OcrBadge(_titleModel.NewOwnerCity)
+                        </label>
+                        <InputText @bind-Value="_titleModel.NewOwnerCity" class="form-control"
+                                   placeholder="City" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            State @OcrBadge(_titleModel.NewOwnerState)
+                        </label>
+                        <InputText @bind-Value="_titleModel.NewOwnerState" class="form-control"
+                                   placeholder="State" maxlength="2" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            ZIP Code @OcrBadge(_titleModel.NewOwnerZip)
+                        </label>
+                        <InputText @bind-Value="_titleModel.NewOwnerZip" class="form-control"
+                                   placeholder="ZIP" maxlength="10" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">💰 Transaction &amp; Lienholder</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Purchase Price @OcrBadge(_titleModel.PurchasePrice)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <InputText @bind-Value="_titleModel.PurchasePrice" class="form-control"
+                                       placeholder="0.00" />
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Purchase Date @OcrBadge(_titleModel.PurchaseDate)
+                        </label>
+                        <InputText @bind-Value="_titleModel.PurchaseDate" class="form-control"
+                                   placeholder="MM/DD/YYYY" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Lienholder Name @OcrBadge(_titleModel.LienholderName)
+                        </label>
+                        <InputText @bind-Value="_titleModel.LienholderName" class="form-control"
+                                   placeholder="Bank or financial institution (if any)" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Lienholder Address @OcrBadge(_titleModel.LienholderAddress)
+                        </label>
+                        <InputText @bind-Value="_titleModel.LienholderAddress" class="form-control"
+                                   placeholder="Lienholder address (if any)" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-success btn-lg px-4">
+                ✅ Submit Application
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg px-4" @onclick="ClearForm">
+                🗑 Clear Form
+            </button>
+        </div>
+
+        @if (_submitSuccess)
+        {
+            <div class="alert alert-success" role="alert">
+                <strong>Application submitted successfully!</strong> Your vehicle title application has been received.
+            </div>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private CarTitleModel _titleModel = new();
+    private bool _isProcessing;
+    private bool _uploadSuccess;
+    private string? _uploadMessage;
+    private bool _submitSuccess;
+
+    private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        _uploadMessage = null;
+        _uploadSuccess = false;
+        _isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+
+            if (file.Size > MaxFileSizeBytes)
+            {
+                _uploadMessage = $"File is too large ({file.Size / 1024 / 1024} MB). Maximum size is 20 MB.";
+                return;
+            }
+
+            using var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            await stream.CopyToAsync(ms);
+            var fileBytes = ms.ToArray();
+
+            var extracted = await OcrService.ExtractCarTitleFieldsAsync(fileBytes, file.ContentType);
+            MergeExtractedFields(extracted);
+
+            _uploadSuccess = true;
+            _uploadMessage = "Document analyzed successfully. Fields have been populated below — please review and correct any values.";
+        }
+        catch (Exception ex)
+        {
+            _uploadSuccess = false;
+            _uploadMessage = $"Error processing document: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>Only overwrites fields that are currently empty.</summary>
+    private void MergeExtractedFields(CarTitleModel extracted)
+    {
+        _titleModel.Vin ??= extracted.Vin;
+        _titleModel.Year ??= extracted.Year;
+        _titleModel.Make ??= extracted.Make;
+        _titleModel.VehicleModel ??= extracted.VehicleModel;
+        _titleModel.BodyStyle ??= extracted.BodyStyle;
+        _titleModel.Color ??= extracted.Color;
+        _titleModel.Odometer ??= extracted.Odometer;
+        _titleModel.TitleNumber ??= extracted.TitleNumber;
+        _titleModel.StateOfIssuance ??= extracted.StateOfIssuance;
+        _titleModel.PreviousOwnerName ??= extracted.PreviousOwnerName;
+        _titleModel.PreviousOwnerAddress ??= extracted.PreviousOwnerAddress;
+        _titleModel.PreviousOwnerCity ??= extracted.PreviousOwnerCity;
+        _titleModel.PreviousOwnerState ??= extracted.PreviousOwnerState;
+        _titleModel.PreviousOwnerZip ??= extracted.PreviousOwnerZip;
+        _titleModel.NewOwnerName ??= extracted.NewOwnerName;
+        _titleModel.NewOwnerAddress ??= extracted.NewOwnerAddress;
+        _titleModel.NewOwnerCity ??= extracted.NewOwnerCity;
+        _titleModel.NewOwnerState ??= extracted.NewOwnerState;
+        _titleModel.NewOwnerZip ??= extracted.NewOwnerZip;
+        _titleModel.PurchasePrice ??= extracted.PurchasePrice;
+        _titleModel.PurchaseDate ??= extracted.PurchaseDate;
+        _titleModel.LienholderName ??= extracted.LienholderName;
+        _titleModel.LienholderAddress ??= extracted.LienholderAddress;
+    }
+
+    private void HandleSubmit() => _submitSuccess = true;
+
+    private void ClearForm()
+    {
+        _titleModel = new CarTitleModel();
+        _uploadMessage = null;
+        _uploadSuccess = false;
+        _submitSuccess = false;
+    }
+
+    private RenderFragment OcrBadge(string? value) => @<text>
+        @if (!string.IsNullOrWhiteSpace(value))
+        {
+            <span class="badge bg-success ms-1" title="Auto-filled by OCR">OCR</span>
+        }
+    </text>;
+}
+

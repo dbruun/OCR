@@ -1,0 +1,26 @@
+# Build output
+**/bin/
+**/obj/
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# Rider
+.idea/
+
+# Secrets / local overrides (never commit real keys)
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.Development.json
+
+# NuGet packages
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+
+# OS
+.DS_Store
+Thumbs.db
