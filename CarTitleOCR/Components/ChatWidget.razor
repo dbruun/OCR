@@ -7,7 +7,7 @@
     <!-- Toggle button -->
     <button class="chat-widget__toggle btn btn-primary rounded-circle shadow"
             @onclick="ToggleChat"
-            title="@(_isOpen ? "Close assistant" : "Ask a question about car titles")">
+            title="@(_isOpen ? "Close assistant" : "Ask a question about bicycle titles")">
         @if (_isOpen)
         {
             <span>✕</span>
@@ -33,7 +33,7 @@
                 @if (_messages.Count == 0)
                 {
                     <div class="text-muted small fst-italic text-center py-3">
-                        Ask me anything about the vehicle title transfer process!
+                        Ask me anything about the bicycle title transfer process!
                     </div>
                 }
 
