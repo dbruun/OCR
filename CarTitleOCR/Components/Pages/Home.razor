@@ -2,13 +2,13 @@
 @rendermode InteractiveServer
 @inject IOcrService OcrService
 
-<PageTitle>Vehicle Title Registration</PageTitle>
+<PageTitle>Bicycle Title Registration</PageTitle>
 
 <div class="container-fluid py-3">
     <div class="d-flex align-items-center mb-4">
-        <span class="fs-1 me-3">🚗</span>
+        <span class="fs-1 me-3">🚲</span>
         <div>
-            <h1 class="mb-0">Vehicle Title Application</h1>
+            <h1 class="mb-0">Bicycle Title Application</h1>
             <p class="text-muted mb-0">Upload an out-of-state title or enter information manually</p>
         </div>
     </div>
@@ -20,7 +20,7 @@
         </div>
         <div class="card-body">
             <p class="text-muted small">
-                Upload a scan or photo of the vehicle title. Microsoft Azure AI Document Intelligence
+                Upload a scan or photo of the bicycle title. Microsoft Azure AI Document Intelligence
                 will automatically extract and populate the form fields below.
                 Accepted formats: PDF, JPEG, PNG, TIFF.
             </p>
@@ -49,19 +49,19 @@
     <EditForm Model="@_titleModel" OnValidSubmit="HandleSubmit">
         <DataAnnotationsValidator />
 
-        <!-- Vehicle Information -->
+        <!-- Bicycle Information -->
         <div class="card mb-4">
             <div class="card-header">
-                <h5 class="mb-0">🔧 Vehicle Information</h5>
+                <h5 class="mb-0">🔧 Bicycle Information</h5>
             </div>
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Vehicle Identification Number (VIN) @OcrBadge(_titleModel.Vin)
+                            VIN @OcrBadge(_titleModel.Vin)
                         </label>
                         <InputText @bind-Value="_titleModel.Vin" class="form-control font-monospace"
-                                   placeholder="e.g. 1HGBH41JXMN109186" maxlength="17" />
+                                   placeholder="e.g. WTU19C00423" maxlength="17" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">
@@ -75,30 +75,28 @@
                             Make @OcrBadge(_titleModel.Make)
                         </label>
                         <InputText @bind-Value="_titleModel.Make" class="form-control"
-                                   placeholder="e.g. Toyota" />
+                                   placeholder="e.g. Trek" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">
-                            Model @OcrBadge(_titleModel.VehicleModel)
+                            Model @OcrBadge(_titleModel.BicycleModel)
                         </label>
-                        <InputText @bind-Value="_titleModel.VehicleModel" class="form-control"
-                                   placeholder="e.g. Camry" />
+                        <InputText @bind-Value="_titleModel.BicycleModel" class="form-control"
+                                   placeholder="e.g. FX3" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Body Style @OcrBadge(_titleModel.BodyStyle)
+                            Bicycle Type @OcrBadge(_titleModel.BodyStyle)
                         </label>
                         <InputSelect @bind-Value="_titleModel.BodyStyle" class="form-select">
                             <option value="">-- Select --</option>
-                            <option>Sedan</option>
-                            <option>SUV</option>
-                            <option>Truck</option>
-                            <option>Van</option>
-                            <option>Coupe</option>
-                            <option>Convertible</option>
-                            <option>Wagon</option>
-                            <option>Hatchback</option>
-                            <option>Motorcycle</option>
+                            <option>Road</option>
+                            <option>Mountain</option>
+                            <option>Hybrid</option>
+                            <option>City/Commuter</option>
+                            <option>BMX</option>
+                            <option>Electric</option>
+                            <option>Cargo</option>
                             <option>Other</option>
                         </InputSelect>
                     </div>
@@ -281,7 +279,7 @@
         @if (_submitSuccess)
         {
             <div class="alert alert-success" role="alert">
-                <strong>Application submitted successfully!</strong> Your vehicle title application has been received.
+                <strong>Application submitted successfully!</strong> Your bicycle title application has been received.
             </div>
         }
     </EditForm>
@@ -342,7 +340,7 @@
         _titleModel.Vin ??= extracted.Vin;
         _titleModel.Year ??= extracted.Year;
         _titleModel.Make ??= extracted.Make;
-        _titleModel.VehicleModel ??= extracted.VehicleModel;
+        _titleModel.BicycleModel ??= extracted.BicycleModel;
         _titleModel.BodyStyle ??= extracted.BodyStyle;
         _titleModel.Color ??= extracted.Color;
         _titleModel.Odometer ??= extracted.Odometer;

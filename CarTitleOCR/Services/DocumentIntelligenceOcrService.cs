@@ -44,13 +44,13 @@ public class DocumentIntelligenceOcrService : IOcrService
             }
         }
 
-        // Supplement with paragraph text if VIN is still missing (scan for 17-char alphanumeric)
+        // Supplement with paragraph text if VIN is still missing (scan for alphanumeric serial)
         if (string.IsNullOrWhiteSpace(model.Vin) && result.Paragraphs != null)
         {
             foreach (var paragraph in result.Paragraphs)
             {
                 var text = paragraph.Content?.Trim() ?? string.Empty;
-                if (IsLikelyVin(text))
+                if (IsLikelySerialNumber(text))
                 {
                     model.Vin = text;
                     break;
@@ -68,14 +68,14 @@ public class DocumentIntelligenceOcrService : IOcrService
 
         var normalizedKey = key.ToUpperInvariant();
 
-        if (Contains(normalizedKey, "VIN", "VEHICLE IDENTIFICATION NUMBER", "VEHICLE ID"))
+        if (Contains(normalizedKey, "VIN", "BICYCLE IDENTIFICATION NUMBER", "SERIAL NUMBER", "BICYCLE ID"))
             model.Vin ??= value;
         else if (Contains(normalizedKey, "YEAR", "MODEL YEAR", "YR"))
             model.Year ??= value;
-        else if (Contains(normalizedKey, "MAKE", "VEHICLE MAKE", "MFR", "MANUFACTURER"))
+        else if (Contains(normalizedKey, "MAKE", "BICYCLE MAKE", "MFR", "MANUFACTURER"))
             model.Make ??= value;
-        else if (Contains(normalizedKey, "MODEL", "VEHICLE MODEL") && !Contains(normalizedKey, "YEAR"))
-            model.VehicleModel ??= value;
+        else if (Contains(normalizedKey, "MODEL", "BICYCLE MODEL") && !Contains(normalizedKey, "YEAR"))
+            model.BicycleModel ??= value;
         else if (Contains(normalizedKey, "BODY STYLE", "BODY TYPE", "STYLE"))
             model.BodyStyle ??= value;
         else if (Contains(normalizedKey, "COLOR", "COLOUR", "EXTERIOR COLOR"))
@@ -101,8 +101,8 @@ public class DocumentIntelligenceOcrService : IOcrService
     private static bool Contains(string source, params string[] candidates)
         => candidates.Any(c => source.Contains(c, StringComparison.OrdinalIgnoreCase));
 
-    private static bool IsLikelyVin(string text)
-        => text.Length == 17
+    private static bool IsLikelySerialNumber(string text)
+        => text.Length >= 6 && text.Length <= 17
             && text.All(c => char.IsLetterOrDigit(c))
             && !text.All(char.IsDigit);
 }

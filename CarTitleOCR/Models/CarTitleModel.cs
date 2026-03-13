@@ -2,11 +2,11 @@ namespace CarTitleOCR.Models;
 
 public class CarTitleModel
 {
-    // Vehicle Information
+    // Bicycle Information
     public string? Vin { get; set; }
     public string? Year { get; set; }
     public string? Make { get; set; }
-    public string? VehicleModel { get; set; }
+    public string? BicycleModel { get; set; }
     public string? BodyStyle { get; set; }
     public string? Color { get; set; }
     public string? Odometer { get; set; }

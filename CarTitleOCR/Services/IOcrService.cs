@@ -5,7 +5,7 @@ namespace CarTitleOCR.Services;
 public interface IOcrService
 {
     /// <summary>
-    /// Analyzes an uploaded document and extracts car title fields.
+    /// Analyzes an uploaded document and extracts bicycle title fields.
     /// </summary>
     /// <param name="fileBytes">The raw bytes of the uploaded document.</param>
     /// <param name="contentType">MIME type of the uploaded file.</param>
