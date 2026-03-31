@@ -48,9 +48,9 @@ public sealed class FoundryAgentService : IAgentService, IAsyncDisposable
         var endpoint = configuration["AzureAIFoundry:Endpoint"];
         if (!string.IsNullOrWhiteSpace(endpoint))
         {
-            // DefaultAzureCredential tries Azure CLI, managed identity, and service-principal
-            // environment variables automatically — no secrets stored in config.
-            _projectClient = new AIProjectClient(new Uri(endpoint), new DefaultAzureCredential());
+            // Use AzureCliCredential directly - forces use of your az login session
+            var credential = new AzureCliCredential();
+            _projectClient = new AIProjectClient(new Uri(endpoint), credential);
         }
     }
 
@@ -110,8 +110,9 @@ public sealed class FoundryAgentService : IAgentService, IAsyncDisposable
             // Reuse an existing agent definition if one already exists with this name.
             return await _projectClient!.GetAIAgentAsync(_agentName, cancellationToken: cancellationToken);
         }
-        catch (RequestFailedException ex) when (ex.Status == 404)
+        catch (Exception ex) when (ex.Message.Contains("not_found") || ex.Message.Contains("doesn't exist") || (ex is RequestFailedException rfe && rfe.Status == 404))
         {
+            // Agent doesn't exist yet, create it
             return await _projectClient!.CreateAIAgentAsync(
                 name: _agentName,
                 model: _modelDeploymentName,

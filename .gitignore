@@ -13,7 +13,12 @@
 # Secrets / local overrides (never commit real keys)
 **/appsettings.*.json
 !**/appsettings.json
-!**/appsettings.Development.json
+!**/appsettings.Development.example.json
+**/appsettings.local.json
+**/appsettings.*.local.json
+
+# .NET user secrets
+secrets.json
 
 # NuGet packages
 *.nupkg

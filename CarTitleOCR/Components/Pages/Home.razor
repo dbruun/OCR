@@ -317,10 +317,13 @@
             var fileBytes = ms.ToArray();
 
             var extracted = await OcrService.ExtractCarTitleFieldsAsync(fileBytes, file.ContentType);
+            var hadExtractedValues = HasExtractedValues(extracted);
             MergeExtractedFields(extracted);
 
-            _uploadSuccess = true;
-            _uploadMessage = "Document analyzed successfully. Fields have been populated below — please review and correct any values.";
+            _uploadSuccess = hadExtractedValues;
+            _uploadMessage = hadExtractedValues
+                ? "Document analyzed successfully. Fields have been populated below — please review and correct any values."
+                : "Document was analyzed, but no supported fields were extracted. Check the OCR output format or try a clearer scan/PDF.";
         }
         catch (Exception ex)
         {
@@ -361,6 +364,34 @@
         _titleModel.LienholderName ??= extracted.LienholderName;
         _titleModel.LienholderAddress ??= extracted.LienholderAddress;
     }
+
+    private static bool HasExtractedValues(CarTitleModel extracted)
+        => new[]
+        {
+            extracted.Vin,
+            extracted.Year,
+            extracted.Make,
+            extracted.BicycleModel,
+            extracted.BodyStyle,
+            extracted.Color,
+            extracted.Odometer,
+            extracted.TitleNumber,
+            extracted.StateOfIssuance,
+            extracted.PreviousOwnerName,
+            extracted.PreviousOwnerAddress,
+            extracted.PreviousOwnerCity,
+            extracted.PreviousOwnerState,
+            extracted.PreviousOwnerZip,
+            extracted.NewOwnerName,
+            extracted.NewOwnerAddress,
+            extracted.NewOwnerCity,
+            extracted.NewOwnerState,
+            extracted.NewOwnerZip,
+            extracted.PurchasePrice,
+            extracted.PurchaseDate,
+            extracted.LienholderName,
+            extracted.LienholderAddress,
+        }.Any(value => !string.IsNullOrWhiteSpace(value));
 
     private void HandleSubmit() => _submitSuccess = true;
 

@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>CarTitleOCR-7f6f6606-f84c-4cc4-b070-94b7cd09cc2a</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
