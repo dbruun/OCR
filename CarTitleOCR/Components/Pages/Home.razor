@@ -1,6 +1,8 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@using CarTitleOCR.Models
 @inject IOcrService OcrService
+@inject IFraudDetectionService FraudDetectionService
 
 <PageTitle>Bicycle Title Registration</PageTitle>
 
@@ -38,12 +40,35 @@
 
             @if (!string.IsNullOrEmpty(_uploadMessage))
             {
-                <div class="alert @(_uploadSuccess ? "alert-success" : "alert-danger") mt-2 mb-0" role="alert">
+                <div class="alert @_uploadAlertClass mt-2 mb-0" role="alert">
                     @_uploadMessage
                 </div>
             }
         </div>
     </div>
+
+    @if (_fraudCheck?.Flags.Any() == true)
+    {
+        <div class="alert @(_fraudCheck.RequiresManualReview ? "alert-warning" : "alert-info") mb-4" role="alert">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <strong>Fraud review signals detected</strong>
+                    <div class="small mt-1">Risk score: @_fraudCheck.Score</div>
+                </div>
+                @if (_fraudCheck.RequiresManualReview)
+                {
+                    <span class="badge bg-warning text-dark">Manual review recommended</span>
+                }
+            </div>
+
+            <ul class="mb-0 mt-2">
+                @foreach (var flag in _fraudCheck.Flags)
+                {
+                    <li>@flag</li>
+                }
+            </ul>
+        </div>
+    }
 
     <!-- Title Entry Form -->
     <EditForm Model="@_titleModel" OnValidSubmit="HandleSubmit">
@@ -58,35 +83,35 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            VIN @OcrBadge(_titleModel.Vin)
+                            VIN @OcrBadge(nameof(CarTitleModel.Vin), _titleModel.Vin)
                         </label>
                         <InputText @bind-Value="_titleModel.Vin" class="form-control font-monospace"
                                    placeholder="e.g. WTU19C00423" maxlength="17" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">
-                            Year @OcrBadge(_titleModel.Year)
+                            Year @OcrBadge(nameof(CarTitleModel.Year), _titleModel.Year)
                         </label>
                         <InputText @bind-Value="_titleModel.Year" class="form-control"
                                    placeholder="e.g. 2022" maxlength="4" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">
-                            Make @OcrBadge(_titleModel.Make)
+                            Make @OcrBadge(nameof(CarTitleModel.Make), _titleModel.Make)
                         </label>
                         <InputText @bind-Value="_titleModel.Make" class="form-control"
                                    placeholder="e.g. Trek" />
                     </div>
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">
-                            Model @OcrBadge(_titleModel.BicycleModel)
+                            Model @OcrBadge(nameof(CarTitleModel.BicycleModel), _titleModel.BicycleModel)
                         </label>
                         <InputText @bind-Value="_titleModel.BicycleModel" class="form-control"
                                    placeholder="e.g. FX3" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Bicycle Type @OcrBadge(_titleModel.BodyStyle)
+                            Bicycle Type @OcrBadge(nameof(CarTitleModel.BodyStyle), _titleModel.BodyStyle)
                         </label>
                         <InputSelect @bind-Value="_titleModel.BodyStyle" class="form-select">
                             <option value="">-- Select --</option>
@@ -102,28 +127,28 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Color @OcrBadge(_titleModel.Color)
+                            Color @OcrBadge(nameof(CarTitleModel.Color), _titleModel.Color)
                         </label>
                         <InputText @bind-Value="_titleModel.Color" class="form-control"
                                    placeholder="e.g. Silver" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Odometer Reading @OcrBadge(_titleModel.Odometer)
+                            Odometer Reading @OcrBadge(nameof(CarTitleModel.Odometer), _titleModel.Odometer)
                         </label>
                         <InputText @bind-Value="_titleModel.Odometer" class="form-control"
                                    placeholder="e.g. 45000" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Title Number @OcrBadge(_titleModel.TitleNumber)
+                            Title Number @OcrBadge(nameof(CarTitleModel.TitleNumber), _titleModel.TitleNumber)
                         </label>
                         <InputText @bind-Value="_titleModel.TitleNumber" class="form-control"
                                    placeholder="Title document number" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Issuing State @OcrBadge(_titleModel.StateOfIssuance)
+                            Issuing State @OcrBadge(nameof(CarTitleModel.StateOfIssuance), _titleModel.StateOfIssuance)
                         </label>
                         <InputText @bind-Value="_titleModel.StateOfIssuance" class="form-control"
                                    placeholder="e.g. CA, TX, NY" maxlength="2" />
@@ -141,35 +166,35 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Full Name @OcrBadge(_titleModel.PreviousOwnerName)
+                            Full Name @OcrBadge(nameof(CarTitleModel.PreviousOwnerName), _titleModel.PreviousOwnerName)
                         </label>
                         <InputText @bind-Value="_titleModel.PreviousOwnerName" class="form-control"
                                    placeholder="Full legal name" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Street Address @OcrBadge(_titleModel.PreviousOwnerAddress)
+                            Street Address @OcrBadge(nameof(CarTitleModel.PreviousOwnerAddress), _titleModel.PreviousOwnerAddress)
                         </label>
                         <InputText @bind-Value="_titleModel.PreviousOwnerAddress" class="form-control"
                                    placeholder="Street address" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
-                            City @OcrBadge(_titleModel.PreviousOwnerCity)
+                            City @OcrBadge(nameof(CarTitleModel.PreviousOwnerCity), _titleModel.PreviousOwnerCity)
                         </label>
                         <InputText @bind-Value="_titleModel.PreviousOwnerCity" class="form-control"
                                    placeholder="City" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
-                            State @OcrBadge(_titleModel.PreviousOwnerState)
+                            State @OcrBadge(nameof(CarTitleModel.PreviousOwnerState), _titleModel.PreviousOwnerState)
                         </label>
                         <InputText @bind-Value="_titleModel.PreviousOwnerState" class="form-control"
                                    placeholder="State" maxlength="2" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
-                            ZIP Code @OcrBadge(_titleModel.PreviousOwnerZip)
+                            ZIP Code @OcrBadge(nameof(CarTitleModel.PreviousOwnerZip), _titleModel.PreviousOwnerZip)
                         </label>
                         <InputText @bind-Value="_titleModel.PreviousOwnerZip" class="form-control"
                                    placeholder="ZIP" maxlength="10" />
@@ -187,35 +212,35 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Full Name @OcrBadge(_titleModel.NewOwnerName)
+                            Full Name @OcrBadge(nameof(CarTitleModel.NewOwnerName), _titleModel.NewOwnerName)
                         </label>
                         <InputText @bind-Value="_titleModel.NewOwnerName" class="form-control"
                                    placeholder="Full legal name" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Street Address @OcrBadge(_titleModel.NewOwnerAddress)
+                            Street Address @OcrBadge(nameof(CarTitleModel.NewOwnerAddress), _titleModel.NewOwnerAddress)
                         </label>
                         <InputText @bind-Value="_titleModel.NewOwnerAddress" class="form-control"
                                    placeholder="Street address" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
-                            City @OcrBadge(_titleModel.NewOwnerCity)
+                            City @OcrBadge(nameof(CarTitleModel.NewOwnerCity), _titleModel.NewOwnerCity)
                         </label>
                         <InputText @bind-Value="_titleModel.NewOwnerCity" class="form-control"
                                    placeholder="City" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
-                            State @OcrBadge(_titleModel.NewOwnerState)
+                            State @OcrBadge(nameof(CarTitleModel.NewOwnerState), _titleModel.NewOwnerState)
                         </label>
                         <InputText @bind-Value="_titleModel.NewOwnerState" class="form-control"
                                    placeholder="State" maxlength="2" />
                     </div>
                     <div class="col-md-4">
                         <label class="form-label fw-semibold">
-                            ZIP Code @OcrBadge(_titleModel.NewOwnerZip)
+                            ZIP Code @OcrBadge(nameof(CarTitleModel.NewOwnerZip), _titleModel.NewOwnerZip)
                         </label>
                         <InputText @bind-Value="_titleModel.NewOwnerZip" class="form-control"
                                    placeholder="ZIP" maxlength="10" />
@@ -233,7 +258,7 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Purchase Price @OcrBadge(_titleModel.PurchasePrice)
+                            Purchase Price @OcrBadge(nameof(CarTitleModel.PurchasePrice), _titleModel.PurchasePrice)
                         </label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
@@ -243,21 +268,21 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">
-                            Purchase Date @OcrBadge(_titleModel.PurchaseDate)
+                            Purchase Date @OcrBadge(nameof(CarTitleModel.PurchaseDate), _titleModel.PurchaseDate)
                         </label>
                         <InputText @bind-Value="_titleModel.PurchaseDate" class="form-control"
                                    placeholder="MM/DD/YYYY" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Lienholder Name @OcrBadge(_titleModel.LienholderName)
+                            Lienholder Name @OcrBadge(nameof(CarTitleModel.LienholderName), _titleModel.LienholderName)
                         </label>
                         <InputText @bind-Value="_titleModel.LienholderName" class="form-control"
                                    placeholder="Bank or financial institution (if any)" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Lienholder Address @OcrBadge(_titleModel.LienholderAddress)
+                            Lienholder Address @OcrBadge(nameof(CarTitleModel.LienholderAddress), _titleModel.LienholderAddress)
                         </label>
                         <InputText @bind-Value="_titleModel.LienholderAddress" class="form-control"
                                    placeholder="Lienholder address (if any)" />
@@ -288,16 +313,17 @@
 @code {
     private CarTitleModel _titleModel = new();
     private bool _isProcessing;
-    private bool _uploadSuccess;
     private string? _uploadMessage;
+    private string _uploadAlertClass = "alert-info";
     private bool _submitSuccess;
+    private FraudCheckResult? _fraudCheck;
 
     private const long MaxFileSizeBytes = 20 * 1024 * 1024; // 20 MB
 
     private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
         _uploadMessage = null;
-        _uploadSuccess = false;
+        _uploadAlertClass = "alert-info";
         _isProcessing = true;
         StateHasChanged();
 
@@ -307,6 +333,7 @@
 
             if (file.Size > MaxFileSizeBytes)
             {
+                _uploadAlertClass = "alert-danger";
                 _uploadMessage = $"File is too large ({file.Size / 1024 / 1024} MB). Maximum size is 20 MB.";
                 return;
             }
@@ -319,15 +346,30 @@
             var extracted = await OcrService.ExtractCarTitleFieldsAsync(fileBytes, file.ContentType);
             var hadExtractedValues = HasExtractedValues(extracted);
             MergeExtractedFields(extracted);
+            _fraudCheck = FraudDetectionService.Evaluate(_titleModel, registerVin: hadExtractedValues);
 
-            _uploadSuccess = hadExtractedValues;
-            _uploadMessage = hadExtractedValues
-                ? "Document analyzed successfully. Fields have been populated below — please review and correct any values."
-                : "Document was analyzed, but no supported fields were extracted. Check the OCR output format or try a clearer scan/PDF.";
+            if (!hadExtractedValues)
+            {
+                _uploadAlertClass = "alert-danger";
+                _uploadMessage = "Document was analyzed, but no supported fields were extracted. Check the OCR output format or try a clearer scan/PDF.";
+            }
+            else if (_fraudCheck.Flags.Any())
+            {
+                _uploadAlertClass = _fraudCheck.RequiresManualReview ? "alert-warning" : "alert-info";
+                _uploadMessage = _fraudCheck.RequiresManualReview
+                    ? "Document analyzed, but fraud review signals were detected during OCR review. Manual review is recommended before submission."
+                    : "Document analyzed. Fraud review signals were detected during OCR review; review the warnings below before submission.";
+            }
+            else
+            {
+                _uploadAlertClass = "alert-success";
+                _uploadMessage = "Document analyzed successfully. Fields have been populated below — please review and correct any values.";
+            }
         }
         catch (Exception ex)
         {
-            _uploadSuccess = false;
+            _uploadAlertClass = "alert-danger";
+            _fraudCheck = null;
             _uploadMessage = $"Error processing document: {ex.Message}";
         }
         finally
@@ -393,20 +435,32 @@
             extracted.LienholderAddress,
         }.Any(value => !string.IsNullOrWhiteSpace(value));
 
-    private void HandleSubmit() => _submitSuccess = true;
+    private void HandleSubmit()
+    {
+        _fraudCheck = FraudDetectionService.Evaluate(_titleModel, registerVin: false);
+        _submitSuccess = !_fraudCheck.RequiresManualReview;
+    }
 
     private void ClearForm()
     {
         _titleModel = new CarTitleModel();
         _uploadMessage = null;
-        _uploadSuccess = false;
+        _uploadAlertClass = "alert-info";
         _submitSuccess = false;
+        _fraudCheck = null;
     }
 
-    private RenderFragment OcrBadge(string? value) => @<text>
+    private RenderFragment OcrBadge(string fieldName, string? value) => @<text>
         @if (!string.IsNullOrWhiteSpace(value))
         {
-            <span class="badge bg-success ms-1" title="Auto-filled by OCR">OCR</span>
+            @if (_fraudCheck?.ReviewFields.Contains(fieldName) == true)
+            {
+                <span class="badge bg-warning text-dark ms-1" title="Review this OCR value">Review</span>
+            }
+            else
+            {
+                <span class="badge bg-success ms-1" title="Auto-filled by OCR">OCR</span>
+            }
         }
     </text>;
 }

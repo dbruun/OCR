@@ -97,12 +97,17 @@ public class DocumentIntelligenceOcrService : IOcrService
             "TRANSACTION DETAILS",
             "LIENHOLDER",
             "NOTICE:");
-        model.PurchaseDate = MatchValue(transactionBlock, @"\bPurchase\s+Date\s*:\s*([^\r\n:]+?)(?=\s+Purchase\s+Price\s*:|\r|\n|$)");
-        model.PurchasePrice = NormalizePrice(MatchValue(transactionBlock, @"\bPurchase\s+Price\s*:\s*(\$?\s*[0-9,.]+(?:\.[0-9]{2})?)"));
+        model.PurchaseDate = MatchDateValue(transactionBlock, "Purchase Date")
+            ?? MatchDateValue(fullText, "Purchase Date");
+        model.PurchasePrice = NormalizePrice(
+            MatchValue(transactionBlock, @"\bPurchase\s+Price\s*:\s*(\$?\s*[0-9,.]+(?:\.[0-9]{2})?)")
+            ?? MatchValue(fullText, @"\bPurchase\s+Price\s*:\s*(\$?\s*[0-9,.]+(?:\.[0-9]{2})?)"));
 
         var lienBlock = ExtractSection(fullText, "LIENHOLDER", "NOTICE:");
-        model.LienholderName = MatchValue(lienBlock, @"\bLien\s+Holder\s+Name\s*:\s*([^\r\n:]+?)(?=\s+Lien\s+Holder\s+Address\s*:|\r|\n|$)");
-        model.LienholderAddress = MatchValue(lienBlock, @"\bLien\s+Holder\s+Address\s*:\s*([^\r\n]+)");
+        model.LienholderName = MatchValue(lienBlock, @"\bLien\s+Holder\s+Name\s*:\s*([^\r\n:]+?)(?=\s+Lien\s+Holder\s+Address\s*:|\r|\n|$)")
+            ?? MatchValue(fullText, @"\bLien\s+Holder\s+Name\s*:\s*([^\r\n:]+?)(?=\s+Lien\s+Holder\s+Address\s*:|\r|\n|$)");
+        model.LienholderAddress = MatchValue(lienBlock, @"\bLien\s+Holder\s+Address\s*:\s*([^\r\n]+)")
+            ?? MatchValue(fullText, @"\bLien\s+Holder\s+Address\s*:\s*([^\r\n]+)");
 
         return model;
     }
@@ -167,6 +172,21 @@ public class DocumentIntelligenceOcrService : IOcrService
 
         var value = NormalizeWhitespace(match.Groups[1].Value);
         return string.IsNullOrWhiteSpace(value) ? null : value.Trim('|', ' ');
+    }
+
+    private static string? MatchDateValue(string text, string label)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return null;
+
+        var normalizedText = NormalizeWhitespace(text);
+        var escapedLabel = Regex.Escape(label).Replace("\\ ", "\\s+");
+        var pattern = $@"\b{escapedLabel}\s*:\s*((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{{1,2}},\s+\d{{4}})";
+        var match = Regex.Match(normalizedText, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success || match.Groups.Count < 2)
+            return null;
+
+        return NormalizeWhitespace(match.Groups[1].Value);
     }
 
     private static string NormalizeWhitespace(string? text)

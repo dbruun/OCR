@@ -11,6 +11,9 @@ builder.Services.AddRazorComponents()
 // Register the Azure AI Document Intelligence OCR service (singleton — stateless).
 builder.Services.AddSingleton<IOcrService, DocumentIntelligenceOcrService>();
 
+// Register fraud detection as a singleton so duplicate VIN checks persist while the app is running.
+builder.Services.AddSingleton<IFraudDetectionService, FraudDetectionService>();
+
 // Register the Foundry agent service (scoped — one per Blazor circuit for per-user sessions).
 // The service creates the AIProjectClient internally from AzureAIFoundry:Endpoint config.
 builder.Services.AddScoped<IAgentService, FoundryAgentService>();
