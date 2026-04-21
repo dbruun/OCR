@@ -1,0 +1,268 @@
+@page "/continuation-sheet"
+@rendermode InteractiveServer
+@using CarTitleOCR.Models
+@inject IOcrService OcrService
+
+<PageTitle>Continuation Sheet</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center mb-4">
+        <span class="fs-1 me-3">📋</span>
+        <div>
+            <h1 class="mb-0">Continuation Sheet</h1>
+            <p class="text-muted mb-0">Upload a TJJD Continuation Sheet PDF to extract incident details</p>
+        </div>
+    </div>
+
+    <!-- Document Upload Section -->
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📄 Upload Continuation Sheet (OCR Auto-Fill)</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                Upload a scan or photo of a TJJD Continuation Sheet (CCF-500).
+                Azure AI Document Intelligence will extract and populate the form fields below.
+                Accepted formats: PDF, JPEG, PNG, TIFF.
+            </p>
+
+            <InputFile OnChange="HandleFileUpload" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif"
+                       class="form-control mb-3" disabled="@_isProcessing" />
+
+            @if (_isProcessing)
+            {
+                <div class="d-flex align-items-center text-primary">
+                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                    <span>Analyzing document with Azure AI Document Intelligence…</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_uploadMessage))
+            {
+                <div class="alert @_uploadAlertClass mt-2 mb-0" role="alert">
+                    @_uploadMessage
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Continuation Sheet Form -->
+    <EditForm Model="@_model" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <!-- Header Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">📝 Incident Header</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Date @OcrBadge(_model.Date)
+                        </label>
+                        <InputText @bind-Value="_model.Date" class="form-control"
+                                   placeholder="MM/DD/YY" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Time @OcrBadge(_model.Time)
+                        </label>
+                        <InputText @bind-Value="_model.Time" class="form-control"
+                                   placeholder="e.g. 1:15 pm" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Incident Pointer # @OcrBadge(_model.IncidentPointer)
+                        </label>
+                        <InputText @bind-Value="_model.IncidentPointer" class="form-control"
+                                   placeholder="Incident pointer number" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            TJJD Number @OcrBadge(_model.TjjdNumber)
+                        </label>
+                        <InputText @bind-Value="_model.TjjdNumber" class="form-control"
+                                   placeholder="e.g. 121267" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Youth & Location -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">👤 Youth & Location</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Youth's Name @OcrBadge(_model.YouthName)
+                        </label>
+                        <InputText @bind-Value="_model.YouthName" class="form-control"
+                                   placeholder="Last, First MI" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Location @OcrBadge(_model.Location)
+                        </label>
+                        <InputText @bind-Value="_model.Location" class="form-control"
+                                   placeholder="Location" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Form Number/Name/Item @OcrBadge(_model.FormNumberNameItem)
+                        </label>
+                        <InputText @bind-Value="_model.FormNumberNameItem" class="form-control"
+                                   placeholder="e.g. CCF-225 - Incident Report" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">📄 Description of Incident</h5>
+            </div>
+            <div class="card-body">
+                <label class="form-label fw-semibold">
+                    Description @OcrBadge(_model.Description)
+                </label>
+                <InputTextArea @bind-Value="_model.Description" class="form-control" rows="10"
+                               placeholder="Description of the incident..." />
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-success btn-lg px-4">
+                ✅ Submit
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg px-4" @onclick="ClearForm">
+                🗑 Clear Form
+            </button>
+        </div>
+
+        @if (_submitSuccess)
+        {
+            <div class="alert alert-success" role="alert">
+                <strong>Continuation sheet submitted successfully!</strong>
+            </div>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private ContinuationSheetModel _model = new();
+    private bool _isProcessing;
+    private string? _uploadMessage;
+    private string _uploadAlertClass = "alert-info";
+    private bool _submitSuccess;
+
+    private const long MaxFileSizeBytes = 20 * 1024 * 1024;
+
+    private HashSet<string> _ocrPopulatedFields = new();
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        _uploadMessage = null;
+        _uploadAlertClass = "alert-info";
+        _isProcessing = true;
+        _ocrPopulatedFields.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+
+            if (file.Size > MaxFileSizeBytes)
+            {
+                _uploadAlertClass = "alert-danger";
+                _uploadMessage = $"File is too large ({file.Size / 1024 / 1024} MB). Maximum size is 20 MB.";
+                return;
+            }
+
+            using var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            await stream.CopyToAsync(ms);
+            var fileBytes = ms.ToArray();
+
+            var extracted = await OcrService.ExtractContinuationSheetFieldsAsync(fileBytes, file.ContentType);
+            MergeExtractedFields(extracted);
+
+            var hasValues = _ocrPopulatedFields.Count > 0;
+
+            if (!hasValues)
+            {
+                _uploadAlertClass = "alert-danger";
+                _uploadMessage = "Document was analyzed, but no fields were extracted. Try a clearer scan/PDF.";
+            }
+            else
+            {
+                _uploadAlertClass = "alert-success";
+                _uploadMessage = "Document analyzed successfully. Fields have been populated below — please review and correct any values.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadAlertClass = "alert-danger";
+            _uploadMessage = $"Error processing document: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void MergeExtractedFields(ContinuationSheetModel extracted)
+    {
+        MergeField(ref _model, extracted, m => m.Date, (m, v) => m.Date = v, nameof(ContinuationSheetModel.Date));
+        MergeField(ref _model, extracted, m => m.Time, (m, v) => m.Time = v, nameof(ContinuationSheetModel.Time));
+        MergeField(ref _model, extracted, m => m.IncidentPointer, (m, v) => m.IncidentPointer = v, nameof(ContinuationSheetModel.IncidentPointer));
+        MergeField(ref _model, extracted, m => m.TjjdNumber, (m, v) => m.TjjdNumber = v, nameof(ContinuationSheetModel.TjjdNumber));
+        MergeField(ref _model, extracted, m => m.YouthName, (m, v) => m.YouthName = v, nameof(ContinuationSheetModel.YouthName));
+        MergeField(ref _model, extracted, m => m.Location, (m, v) => m.Location = v, nameof(ContinuationSheetModel.Location));
+        MergeField(ref _model, extracted, m => m.FormNumberNameItem, (m, v) => m.FormNumberNameItem = v, nameof(ContinuationSheetModel.FormNumberNameItem));
+        MergeField(ref _model, extracted, m => m.Description, (m, v) => m.Description = v, nameof(ContinuationSheetModel.Description));
+    }
+
+    private void MergeField(ref ContinuationSheetModel target, ContinuationSheetModel source,
+        Func<ContinuationSheetModel, string?> getter, Action<ContinuationSheetModel, string?> setter, string fieldName)
+    {
+        var sourceVal = getter(source);
+        if (!string.IsNullOrWhiteSpace(sourceVal) && string.IsNullOrWhiteSpace(getter(target)))
+        {
+            setter(target, sourceVal);
+            _ocrPopulatedFields.Add(fieldName);
+        }
+    }
+
+    private RenderFragment OcrBadge(string? value) => builder =>
+    {
+        if (!string.IsNullOrWhiteSpace(value) && _ocrPopulatedFields.Count > 0)
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "badge bg-info ms-1");
+            builder.AddAttribute(2, "title", "Populated by OCR");
+            builder.AddContent(3, "OCR");
+            builder.CloseElement();
+        }
+    };
+
+    private void HandleSubmit()
+    {
+        _submitSuccess = true;
+        StateHasChanged();
+    }
+
+    private void ClearForm()
+    {
+        _model = new ContinuationSheetModel();
+        _uploadMessage = null;
+        _submitSuccess = false;
+        _ocrPopulatedFields.Clear();
+    }
+}

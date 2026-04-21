@@ -1,16 +1,35 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject NavigationManager Nav
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">🚲 Bicycle Title OCR</a>
+        <a class="navbar-brand" href="">@BrandText</a>
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+@code {
+    private string BrandText =>
+        Nav.Uri.Contains("continuation-sheet", StringComparison.OrdinalIgnoreCase) ? "📋 Continuation Sheet" :
+        Nav.Uri.Contains("incident-report", StringComparison.OrdinalIgnoreCase) ? "🚨 Incident Report" :
+        "🚲 Bicycle Title OCR";
+}
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-file-earmark-text-fill-nav-menu" aria-hidden="true"></span> Title Application
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="continuation-sheet">
+                <span class="bi bi-journal-text-nav-menu" aria-hidden="true"></span> Continuation Sheet
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="incident-report">
+                <span class="bi bi-exclamation-triangle-fill-nav-menu" aria-hidden="true"></span> Incident Report
             </NavLink>
         </div>
     </nav>

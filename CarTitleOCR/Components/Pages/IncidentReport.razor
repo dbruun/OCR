@@ -1,0 +1,405 @@
+@page "/incident-report"
+@rendermode InteractiveServer
+@using CarTitleOCR.Models
+@inject IOcrService OcrService
+
+<PageTitle>Incident Report</PageTitle>
+
+<div class="container-fluid py-3">
+    <div class="d-flex align-items-center mb-4">
+        <span class="fs-1 me-3">🚨</span>
+        <div>
+            <h1 class="mb-0">Incident Report</h1>
+            <p class="text-muted mb-0">Upload a TJJD Incident Report (CCF-225) to extract incident details</p>
+        </div>
+    </div>
+
+    <!-- Document Upload Section -->
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">📄 Upload Incident Report (OCR Auto-Fill)</h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small">
+                Upload a scan or photo of a TJJD Incident Report (CCF-225).
+                Azure AI Document Intelligence will extract and populate the form fields below.
+                Accepted formats: PDF, JPEG, PNG, TIFF.
+            </p>
+
+            <InputFile OnChange="HandleFileUpload" accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif"
+                       class="form-control mb-3" disabled="@_isProcessing" />
+
+            @if (_isProcessing)
+            {
+                <div class="d-flex align-items-center text-primary">
+                    <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                    <span>Analyzing document with Azure AI Document Intelligence…</span>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_uploadMessage))
+            {
+                <div class="alert @_uploadAlertClass mt-2 mb-0" role="alert">
+                    @_uploadMessage
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Incident Report Form -->
+    <EditForm Model="@_model" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+
+        <!-- Header -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">📝 Report Header</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            TJJD Number @OcrBadge(_model.TjjdNumber)
+                        </label>
+                        <InputText @bind-Value="_model.TjjdNumber" class="form-control"
+                                   placeholder="e.g. 1278967" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label fw-semibold">
+                            Youth Name @OcrBadge(_model.YouthName)
+                        </label>
+                        <InputText @bind-Value="_model.YouthName" class="form-control"
+                                   placeholder="Last, First MI" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            Dorm @OcrBadge(_model.Dorm)
+                        </label>
+                        <InputText @bind-Value="_model.Dorm" class="form-control"
+                                   placeholder="Dorm #" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold">
+                            Location @OcrBadge(_model.Location)
+                        </label>
+                        <InputText @bind-Value="_model.Location" class="form-control"
+                                   placeholder="Location" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Incident Details -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">⏰ Incident Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Date of Incident @OcrBadge(_model.DateOfIncident)
+                        </label>
+                        <InputText @bind-Value="_model.DateOfIncident" class="form-control"
+                                   placeholder="MM/DD/YY" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Time of Incident @OcrBadge(_model.TimeOfIncident)
+                        </label>
+                        <InputText @bind-Value="_model.TimeOfIncident" class="form-control"
+                                   placeholder="e.g. 9:30" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Security Camera # @OcrBadge(_model.SecurityCameraNumber)
+                        </label>
+                        <InputText @bind-Value="_model.SecurityCameraNumber" class="form-control"
+                                   placeholder="Camera #" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Institution Location @OcrBadge(_model.InstitutionLocation)
+                        </label>
+                        <InputText @bind-Value="_model.InstitutionLocation" class="form-control"
+                                   placeholder="e.g. DO - Dorm" />
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label fw-semibold">
+                            Applicable Codes @OcrBadge(_model.ApplicableCodes)
+                        </label>
+                        <InputText @bind-Value="_model.ApplicableCodes" class="form-control"
+                                   placeholder="e.g. RF - Rule Violation with Security Referral" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">📄 II. Description of Incident</h5>
+            </div>
+            <div class="card-body">
+                <label class="form-label fw-semibold">
+                    Description @OcrBadge(_model.Description)
+                </label>
+                <InputTextArea @bind-Value="_model.Description" class="form-control" rows="10"
+                               placeholder="Describe in detail actions and statements of youth and staff during incident..." />
+            </div>
+        </div>
+
+        <!-- Follow-up -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">❓ Follow-up Questions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Force Used? @OcrBadge(_model.ForceUsed)
+                        </label>
+                        <InputSelect @bind-Value="_model.ForceUsed" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Youth Injured? @OcrBadge(_model.YouthInjured)
+                        </label>
+                        <InputSelect @bind-Value="_model.YouthInjured" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Infirmary Notified? @OcrBadge(_model.InfirmaryNotified)
+                        </label>
+                        <InputSelect @bind-Value="_model.InfirmaryNotified" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Contraband Found? @OcrBadge(_model.ContrabandFound)
+                        </label>
+                        <InputSelect @bind-Value="_model.ContrabandFound" class="form-select">
+                            <option value="">-- Select --</option>
+                            <option>Yes</option>
+                            <option>No</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Infirmary Time @OcrBadge(_model.InfirmaryNotifiedTime)
+                        </label>
+                        <InputText @bind-Value="_model.InfirmaryNotifiedTime" class="form-control"
+                                   placeholder="Time notified" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            Infirmary Date @OcrBadge(_model.InfirmaryNotifiedDate)
+                        </label>
+                        <InputText @bind-Value="_model.InfirmaryNotifiedDate" class="form-control"
+                                   placeholder="Date notified" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Person Notified @OcrBadge(_model.PersonNotified)
+                        </label>
+                        <InputText @bind-Value="_model.PersonNotified" class="form-control"
+                                   placeholder="Person notified" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Witnesses & Staff -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">👥 Witnesses & Staff</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Staff Witnesses @OcrBadge(_model.StaffWitnesses)
+                        </label>
+                        <InputText @bind-Value="_model.StaffWitnesses" class="form-control"
+                                   placeholder="Staff witness names" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Job Title @OcrBadge(_model.StaffWitnessJobTitle)
+                        </label>
+                        <InputText @bind-Value="_model.StaffWitnessJobTitle" class="form-control"
+                                   placeholder="Job title" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Youth Witnesses @OcrBadge(_model.YouthWitnesses)
+                        </label>
+                        <InputText @bind-Value="_model.YouthWitnesses" class="form-control"
+                                   placeholder="Youth witness names" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Staff Preparing Report @OcrBadge(_model.StaffPreparingReport)
+                        </label>
+                        <InputText @bind-Value="_model.StaffPreparingReport" class="form-control"
+                                   placeholder="Printed name of staff preparing report" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="d-flex gap-2 mb-5">
+            <button type="submit" class="btn btn-success btn-lg px-4">
+                ✅ Submit
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-lg px-4" @onclick="ClearForm">
+                🗑 Clear Form
+            </button>
+        </div>
+
+        @if (_submitSuccess)
+        {
+            <div class="alert alert-success" role="alert">
+                <strong>Incident report submitted successfully!</strong>
+            </div>
+        }
+    </EditForm>
+</div>
+
+@code {
+    private IncidentReportModel _model = new();
+    private bool _isProcessing;
+    private string? _uploadMessage;
+    private string _uploadAlertClass = "alert-info";
+    private bool _submitSuccess;
+
+    private const long MaxFileSizeBytes = 20 * 1024 * 1024;
+
+    private HashSet<string> _ocrPopulatedFields = new();
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        _uploadMessage = null;
+        _uploadAlertClass = "alert-info";
+        _isProcessing = true;
+        _ocrPopulatedFields.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+
+            if (file.Size > MaxFileSizeBytes)
+            {
+                _uploadAlertClass = "alert-danger";
+                _uploadMessage = $"File is too large ({file.Size / 1024 / 1024} MB). Maximum size is 20 MB.";
+                return;
+            }
+
+            using var ms = new MemoryStream();
+            await using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            await stream.CopyToAsync(ms);
+            var fileBytes = ms.ToArray();
+
+            var extracted = await OcrService.ExtractIncidentReportFieldsAsync(fileBytes, file.ContentType);
+            MergeExtractedFields(extracted);
+
+            var hasValues = _ocrPopulatedFields.Count > 0;
+
+            if (!hasValues)
+            {
+                _uploadAlertClass = "alert-danger";
+                _uploadMessage = "Document was analyzed, but no fields were extracted. Try a clearer scan/PDF.";
+            }
+            else
+            {
+                _uploadAlertClass = "alert-success";
+                _uploadMessage = "Document analyzed successfully. Fields have been populated below — please review and correct any values.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadAlertClass = "alert-danger";
+            _uploadMessage = $"Error processing document: {ex.Message}";
+        }
+        finally
+        {
+            _isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private void MergeExtractedFields(IncidentReportModel extracted)
+    {
+        Merge(e => e.TjjdNumber, (m, v) => m.TjjdNumber = v);
+        Merge(e => e.YouthName, (m, v) => m.YouthName = v);
+        Merge(e => e.Dorm, (m, v) => m.Dorm = v);
+        Merge(e => e.Location, (m, v) => m.Location = v);
+        Merge(e => e.DateOfIncident, (m, v) => m.DateOfIncident = v);
+        Merge(e => e.TimeOfIncident, (m, v) => m.TimeOfIncident = v);
+        Merge(e => e.SecurityCameraNumber, (m, v) => m.SecurityCameraNumber = v);
+        Merge(e => e.InstitutionLocation, (m, v) => m.InstitutionLocation = v);
+        Merge(e => e.ApplicableCodes, (m, v) => m.ApplicableCodes = v);
+        Merge(e => e.Description, (m, v) => m.Description = v);
+        Merge(e => e.ForceUsed, (m, v) => m.ForceUsed = v);
+        Merge(e => e.YouthInjured, (m, v) => m.YouthInjured = v);
+        Merge(e => e.InfirmaryNotified, (m, v) => m.InfirmaryNotified = v);
+        Merge(e => e.InfirmaryNotifiedTime, (m, v) => m.InfirmaryNotifiedTime = v);
+        Merge(e => e.InfirmaryNotifiedDate, (m, v) => m.InfirmaryNotifiedDate = v);
+        Merge(e => e.PersonNotified, (m, v) => m.PersonNotified = v);
+        Merge(e => e.ContrabandFound, (m, v) => m.ContrabandFound = v);
+        Merge(e => e.StaffWitnesses, (m, v) => m.StaffWitnesses = v);
+        Merge(e => e.StaffWitnessJobTitle, (m, v) => m.StaffWitnessJobTitle = v);
+        Merge(e => e.YouthWitnesses, (m, v) => m.YouthWitnesses = v);
+        Merge(e => e.StaffPreparingReport, (m, v) => m.StaffPreparingReport = v);
+
+        void Merge(Func<IncidentReportModel, string?> getter, Action<IncidentReportModel, string?> setter)
+        {
+            var val = getter(extracted);
+            if (!string.IsNullOrWhiteSpace(val) && string.IsNullOrWhiteSpace(getter(_model)))
+            {
+                setter(_model, val);
+                _ocrPopulatedFields.Add(val);
+            }
+        }
+    }
+
+    private RenderFragment OcrBadge(string? value) => builder =>
+    {
+        if (!string.IsNullOrWhiteSpace(value) && _ocrPopulatedFields.Count > 0)
+        {
+            builder.OpenElement(0, "span");
+            builder.AddAttribute(1, "class", "badge bg-info ms-1");
+            builder.AddAttribute(2, "title", "Populated by OCR");
+            builder.AddContent(3, "OCR");
+            builder.CloseElement();
+        }
+    };
+
+    private void HandleSubmit()
+    {
+        _submitSuccess = true;
+        StateHasChanged();
+    }
+
+    private void ClearForm()
+    {
+        _model = new IncidentReportModel();
+        _uploadMessage = null;
+        _submitSuccess = false;
+        _ocrPopulatedFields.Clear();
+    }
+}
